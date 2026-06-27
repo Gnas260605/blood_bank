@@ -1,0 +1,24 @@
+# Spring Boot ignores
+**/target/
+**/.mvn/
+**/mvnw
+**/mvnw.cmd
+**/*.class
+**/*.jar
+
+# Node ignores
+**/node_modules/
+**/dist/
+**/.env*
+**/*.local
+
+# IDE and OS
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+.DS_Store
