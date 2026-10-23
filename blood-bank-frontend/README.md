@@ -1,16 +1,23 @@
-# React + Vite
+# Blood Bank — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + Vite client for the Blood Bank System. See the [main README](../README.md) for the full project.
 
-Currently, two official plugins are available:
+## Pages
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Route        | Description                          |
+|--------------|--------------------------------------|
+| `/register`  | Registration form with validation    |
+| `/success`   | Registration success, check your email |
+| `/verify`    | Email verification result            |
+| `/login`     | Login                                |
+| `/dashboard` | User dashboard (after login)         |
 
-## React Compiler
+## Run
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # production build in dist/
+```
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Set `VITE_API_BASE_URL` to change the backend URL (default `http://localhost:8080/api`).

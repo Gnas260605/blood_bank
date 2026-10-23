@@ -1,117 +1,117 @@
-# BÁO CÁO KIẾN TRÚC VÀ LUỒNG DỮ LIỆU — BLOOD BANK SYSTEM
+# Blood Bank System
 
-Tài liệu này mô tả chi tiết kiến trúc hệ thống Blood Bank System theo **Module View** (Decomposition, Uses, Layered Style) để phục vụ cho việc báo cáo bài tập lớn đại học.
+A web application for a blood bank, built with **Spring Boot** and **React**. This repository contains the **Authentication module**: account registration, email verification and login.
 
----
+![Java](https://img.shields.io/badge/Java-21-orange) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F) ![React](https://img.shields.io/badge/React-19-61DAFB) ![MySQL](https://img.shields.io/badge/MySQL-8-4479A1)
 
-## I. KIẾN TRÚC HỆ THỐNG (MODULE VIEW)
+## Features
 
-Hệ thống được phát triển theo mô hình kiến trúc phân tầng (Layered Architecture) kết hợp phân rã các khối chức năng độc lập (Decomposition Style) nhằm đảm bảo tính tái sử dụng và dễ kiểm thử.
+- **Registration** with server-side validation (full name, email, phone format, password strength: at least 8 characters, one uppercase letter and one digit).
+- **Password hashing** with BCrypt. Plain-text passwords are never stored.
+- **Email verification**: a one-time token valid for 24 hours is emailed to the user. Accounts stay `PENDING` until verified.
+- **Resend verification** for users whose link expired.
+- **Login** that blocks unverified (`PENDING`) and `BANNED` accounts and returns the same error for wrong email or wrong password.
+- **Notification log**: every email attempt is recorded as `SENT` or `FAILED` with the error message.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  TẦNG 1 — PRESENTATION LAYER (Giao diện người dùng)          │
-│  - Authentication UI Module (ReactJS Components)             │
-│    ├── RegisterForm, RegisterSuccess, EmailVerified          │
-└────────────────────────────┬─────────────────────────────────┘
-                             │ uses
-┌────────────────────────────▼─────────────────────────────────┐
-│  TẦNG 2 — BUSINESS LOGIC LAYER (Xử lý nghiệp vụ chính)       │
-│  - Authentication Module (Logic đăng ký & kích hoạt token)   │
-│  - Notification Module (Logic build nội dung, phối hợp gửi)  │
-└────────────────────────────┬─────────────────────────────────┘
-                             │ uses
-┌────────────────────────────▼─────────────────────────────────┐
-│  TẦNG 3 — DATA LAYER (Trừu tượng hóa truy cập dữ liệu)       │
-│  - Repository Module (Spring Data JPA Repositories)          │
-│    ├── User Repository, Token Repository, Notification Log   │
-└────────────────────────────┬─────────────────────────────────┘
-                             │ uses
-┌────────────────────────────▼─────────────────────────────────┐
-│  TẦNG 4 — EXTERNAL LAYER (Cổng kết nối dịch vụ ngoài)       │
-│  - Email Gateway Adapter (JavaMailSender kết nối SMTP Gmail) │
-└──────────────────────────────────────────────────────────────┘
-```
+## Tech Stack
 
----
+| Layer    | Technology                                         |
+|----------|----------------------------------------------------|
+| Backend  | Java 21, Spring Boot, Spring Data JPA, Bean Validation, JavaMailSender |
+| Database | MySQL 8                                            |
+| Frontend | React 19, Vite, React Router, Axios                |
 
-## II. PHÂN RÃ HỆ THỐNG THÀNH CÁC MODULE (DECOMPOSITION STYLE)
+## Architecture
 
-Mỗi Module tĩnh trong Module View được ánh xạ trực tiếp sang cấu trúc thư mục của dự án thực tế:
-
-### 1. Presentation Layer (ReactJS Frontend)
-* **Authentication UI Module** (Thư mục: `blood-bank-frontend/src/pages/`)
-  * `RegisterPage.jsx`: Tiếp nhận thông tin đăng ký của người dùng, thực hiện validate client-side (độ dài tên, định dạng Email, độ mạnh mật khẩu, đầu số điện thoại).
-  * `RegisterSuccessPage.jsx`: Hiển thị thông thông báo đăng ký thành công, tích hợp bộ đếm ngược 60 giây để yêu cầu gửi lại thư xác thực.
-  * `EmailVerifiedPage.jsx`: Tiếp nhận tham số token từ URL, gọi API Backend để xác thực tài khoản và dẫn người dùng tới màn hình đăng nhập.
-  * `LoginPage.jsx` & `DashboardPage.jsx`: Hỗ trợ đăng nhập và hiển thị thông tin hồ sơ của tài khoản đã kích hoạt.
-
-### 2. Business Logic & Data Layer (Spring Boot Backend)
-Tổ chức Package trong `blood-bank-backend/src/main/java/com/bloodbank/app/` tuân thủ nghiêm ngặt ranh giới tĩnh:
-
-* **Authentication Module**:
-  * **Controller** (`controller/AuthController.java`): Cung cấp các REST API cho phía giao diện gọi xuống gồm:
-    * `POST /api/auth/register` (Đăng ký mới).
-    * `GET /api/auth/verify?token=...` (Kích hoạt tài khoản).
-    * `POST /api/auth/resend-verification` (Gửi lại mã xác thực).
-    * `POST /api/auth/login` (Đăng nhập).
-  * **Service** (`service/UserService.java` & `UserServiceImpl.java`): Xử lý thuật toán mã hóa mật khẩu bằng **BCrypt**, sinh mã thông báo UUID thời hạn 24h và điều phối sang Notification Module.
-* **Notification Module**:
-  * **Service** (`service/NotificationService.java` & `NotificationServiceImpl.java`): Thiết lập định dạng Mail HTML, thực thi gọi Gateway gửi và ghi nhận lịch sử gửi thư.
-* **Repository Module**:
-  * **Repository** (`repository/`): Trừu tượng hóa truy cập Database gồm `UserRepository`, `VerifyTokenRepository`, `NotificationLogRepository`.
-  * **Entity** (`entity/`): Định nghĩa ánh xạ dữ liệu xuống MySQL gồm `User`, `VerifyToken`, `NotificationLog`.
-
----
-
-## III. LUỒNG DỮ LIỆU THỰC TẾ (DATA FLOW RUNTIME)
-
-Luồng hoạt động tuần tự khi người dùng đăng ký tài khoản mới diễn ra như sau:
+The backend follows a layered architecture:
 
 ```
-[1] Người dùng nhập thông tin -> Click "ĐĂNG KÝ NGAY" (Giao diện React)
-     │
-     ▼
-[2] Giao diện kiểm tra định dạng dữ liệu (Client-side Validation)
-     │
-     ▼
-[3] Gọi REST API: POST /api/auth/register -> Gửi tới AuthController
-     │
-     ▼
-[4] AuthController nhận dữ liệu, gọi sang UserServiceImpl (Authentication Module)
-     │
-     ├─► [5] UserServiceImpl gọi UserRepository truy vấn kiểm tra trùng lặp Email
-     │
-     ├─► [6] Thực hiện mã hóa mật khẩu bằng BCrypt (Bảo mật thông tin)
-     │
-     ├─► [7] Lưu thông tin User mới xuống Database với trạng thái 'PENDING'
-     │
-     ├─► [8] Sinh ngẫu nhiên mã Verification Token (UUID) với thời hạn 24 giờ và lưu vào DB
-     │
-     ▼
-[9] UserServiceImpl yêu cầu gửi thư -> Gọi sang NotificationServiceImpl (Notification Module)
-     │
-     ├─► [10] NotificationServiceImpl gọi Email Gateway Adapter (JavaMailSender)
-     │         gửi email thật qua SMTP Gmail (smtp.gmail.com:587)
-     │
-     ├─► [11] Ghi nhận nhật ký trạng thái (SENT hoặc FAILED) vào bảng notification_logs
-     │
-     ▼
-[12] Trả về HTTP Status 201 Created -> React hiển thị màn hình chúc mừng thành công
+Controller (REST)  →  Service (business rules)  →  Repository (Spring Data JPA)  →  MySQL
+                              │
+                              └→  Notification service  →  SMTP (JavaMailSender)
 ```
 
----
+```
+blood_bank/
+├── blood-bank-backend/
+│   ├── schema.sql                     # Database schema
+│   └── src/main/java/com/bloodbank/app/
+│       ├── controller/                # REST endpoints
+│       ├── service/                   # Business logic (users, notifications)
+│       ├── repository/                # Spring Data JPA repositories
+│       ├── entity/                    # User, VerifyToken, NotificationLog
+│       ├── dto/                       # Request/response objects with validation
+│       └── config/                    # CORS configuration
+├── blood-bank-frontend/               # React + Vite client
+└── docs/                              # Architecture and design reports (Vietnamese)
+```
 
-## IV. BẢNG MẪU DỮ LIỆU CƠ SỞ DỮ LIỆU (DATA MODEL)
+Detailed design documents (module view, data flow, data model) are in [`docs/`](docs/).
 
-### 1. Bảng `users` (Thông tin tài khoản)
-* Lưu trữ hồ sơ người dùng, mật khẩu đã được băm an toàn và trạng thái tài khoản.
-* Khi đăng ký mới, trạng thái mặc định là `PENDING`. Khi người dùng xác thực, trạng thái cập nhật thành `ACTIVE`.
+## API
 
-### 2. Bảng `verify_tokens` (Mã kích hoạt)
-* Lưu trữ mã UUID kích hoạt tài khoản.
-* Có cột liên kết khóa ngoại `user_id` chỉ tới bảng `users` với thuộc tính `ON DELETE CASCADE` (Khi xóa người dùng, mã xác thực tự động bị xóa theo).
+Base URL: `http://localhost:8080/api/auth`
 
-### 3. Bảng `notification_logs` (Nhật ký gửi thư)
-* Lưu trữ thông tin lịch sử gửi thư xác thực để giám sát luồng đi của hệ thống.
-* Ghi lại chi tiết mã lỗi (`error_message`) trong trường hợp gửi email thất bại giúp dễ dàng kiểm tra hệ thống.
+| Method | Endpoint                | Description                              |
+|--------|-------------------------|------------------------------------------|
+| POST   | `/register`             | Create an account and send verification email |
+| GET    | `/verify?token=...`     | Activate the account                     |
+| POST   | `/resend-verification`  | Send a new verification email (`{ "email": "..." }`) |
+| POST   | `/login`                | Log in with email and password           |
+
+## Getting Started
+
+### Prerequisites
+
+- Java 21, Maven
+- Node.js 20+
+- MySQL 8
+
+### 1. Database
+
+```bash
+mysql -u root -p < blood-bank-backend/schema.sql
+```
+
+### 2. Backend
+
+Configuration is read from environment variables (defaults in brackets):
+
+| Variable        | Purpose                                   | Default |
+|-----------------|-------------------------------------------|---------|
+| `DB_URL`        | JDBC URL                                  | `jdbc:mysql://localhost:3306/blood_bank...` |
+| `DB_USERNAME`   | Database user                             | `root` |
+| `DB_PASSWORD`   | Database password                         | empty |
+| `MAIL_USERNAME` | SMTP account (e.g. Gmail address)         | empty |
+| `MAIL_PASSWORD` | SMTP password / Gmail app password        | empty |
+| `FRONTEND_URL`  | Allowed CORS origin and base of verification links | `http://localhost:5173` |
+
+```bash
+cd blood-bank-backend
+export DB_PASSWORD=your_password
+mvn spring-boot:run
+```
+
+Without SMTP credentials the email will not be delivered, but the verification link is always printed to the console, so the flow can be tested locally.
+
+### 3. Frontend
+
+```bash
+cd blood-bank-frontend
+npm install
+npm run dev
+```
+
+The app runs at `http://localhost:5173`. To point it at another backend, set `VITE_API_BASE_URL` (default `http://localhost:8080/api`).
+
+## Roadmap
+
+- [x] Registration, email verification, login
+- [ ] JWT-based session and protected routes
+- [ ] Donor profiles and donation history
+- [ ] Blood inventory by blood group
+- [ ] Blood request management for hospitals
+
+## Author
+
+**Huynh Thanh Sang** — [github.com/Gnas260605](https://github.com/Gnas260605)
