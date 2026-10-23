@@ -5,6 +5,7 @@ import com.bloodbank.app.entity.User;
 import com.bloodbank.app.repository.NotificationLogRepository;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,12 @@ public class NotificationServiceImpl implements NotificationService {
     @Autowired
     private NotificationLogRepository logRepository;
 
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+
     @Override
     public void sendVerificationEmail(User user, String token) {
-        String verificationUrl = "http://localhost:5173/verify?token=" + token;
+        String verificationUrl = frontendUrl + "/verify?token=" + token;
         String subject = "Xác thực tài khoản Blood Bank của bạn";
         String content = "<h3>Xin chào " + user.getFullName() + ",</h3>"
                 + "<p>Cảm ơn bạn đã đăng ký tài khoản tại Blood Bank.</p>"
